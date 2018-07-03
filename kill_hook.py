@@ -41,22 +41,38 @@ class MyEventHandler( EventHandler ):
         self.dwFlagsAndAttributes = dwFlagsAndAttributes
         self.hTemplateFile = hTemplateFile
 
-        self.__print_opening_unicode(event, "file", lpFileName)
+
+        # self.__print_opening_unicode(event, "file", lpFileName)
         process = event.get_process()
-        import pdb; pdb.set_trace()
-        process.inject_code('\xB0\x2B\x24\xDC\xC3')
+
+        # thread = event.get_thread_handle()
+        # print(process.disassemble(thread.get_start_address, 64))
 
     # Methods beginning with "post_" when returning from the API.
 
     def post_CreateFileW(self, event, retval):
         process = event.get_process()
-        # process.suspend()
-        processInfo = process.peek_string(self.dwShareMode, fUnicode=False)
-        print("processInfo: %s" % processInfo)
+        disassemble_process()
 
-        print(self.dwDesiredAccess)
-        # process.resume()
-        self.__print_success(event, retval)
+        if int(str(self.dwDesiredAccess)[-1]) >= 2:
+         process.inject_code('\xB8\x0C\x01\x00\x00\xC3')
+         print('-----------INJECTED------------')
+
+         process.suspend()
+         processInfo = process.peek_string(self.dwDesiredAccess, fUnicode=True)
+
+          print("processInfo: %s" % processInfo)
+          print("dwDesiredAccess: ", self.dwDesiredAccess)
+
+          # process.resume()
+          self.__print_success(event, retval)
+    
+    def disassemble_process(self, event, thread):
+        thread = event.get_thread()
+
+        pc = thread.get_pc()
+        code = thread.disassemble_around(pc)
+        print(code)
 
     def __print_opening_unicode(self, event, tag, pointer):
         string = event.get_process().peek_string(pointer, fUnicode = True )
